@@ -4,21 +4,16 @@ module Mongoid
     extend ActiveSupport::Concern
 
     included do
-      field :_randomization_key, type: Float
+      field :_randomization_key, type: Array
       before_create :generate_mongoid_random_key
-    end
 
+      index({ _randomization_key: "2d" })
+    end
 
     module ClassMethods
 
       def random(count=1, random_key=rand)
-        if where(:_randomization_key => { '$gte' => random_key }).count >= count
-          where(:_randomization_key => { '$gte' => random_key })
-        elsif where(:_randomization_key => { '$lte' => random_key }).count >= count
-          where(:_randomization_key => { '$lte' => random_key })
-        else
-          where(:_randomization_key.ne => nil)
-        end.order_by([ [ [ :_id, :_randomization_key ].sample, [ :asc, :desc ].sample ] ]).limit(count)
+        limit(count).geo_near([random_key, 0])
       end
 
     end
@@ -26,7 +21,7 @@ module Mongoid
   protected
 
     def generate_mongoid_random_key
-      self._randomization_key = rand
+      self._randomization_key = [rand, 0]
     end
 
   end
